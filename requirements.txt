@@ -1,0 +1,5 @@
+streamlit
+pymupdf
+azure-ai-vision-imageanalysis
+azure-core
+groq
