@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 @dataclass
 class StudentAnswer:
     question_id: str
-    answer: str  # raw text extracted / mapped from OCR
+    answer: str
 
 @dataclass
 class StudentScript:
@@ -12,4 +12,3 @@ class StudentScript:
     roll_no: Optional[str]
     meta: Dict[str, Any]
     answers: List[StudentAnswer]
-
