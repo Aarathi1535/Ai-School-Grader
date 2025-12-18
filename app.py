@@ -35,7 +35,9 @@ if st.button("Evaluate Answer Sheet"):
             st.json(student_answers)
 
         # 4. Grade
-        report = grade_script(student_answers)
+        # after you have scheme and student_answers_obj
+        report = grade_script(scheme, student_answers_obj)
+
 
         st.subheader("Overall Result")
         st.metric("Score", f"{report['total']} / {report['max_total']}")
@@ -48,3 +50,4 @@ if st.button("Evaluate Answer Sheet"):
                 st.write(f"**Question:** {q['text']}")
                 st.write(f"**Student Answer:** {q['student_answer']}")
                 st.write(f"**Feedback:** {q['feedback']}")
+
