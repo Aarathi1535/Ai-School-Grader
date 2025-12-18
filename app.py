@@ -1,6 +1,7 @@
 import json
 # app.py
-from .grader_core import load_answer_key, grade_script
+# app.py
+from grader_core import load_answer_key, grade_script
 
 
 def build_student_script_from_ocr(ocr_json_path: str) -> StudentScript:
@@ -39,4 +40,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
