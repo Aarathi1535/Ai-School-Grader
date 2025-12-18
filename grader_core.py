@@ -30,8 +30,7 @@ def grade_true_false(q: Dict[str, Any], ans: str) -> Tuple[float, str]:
 def grade_fill(q: Dict[str, Any], ans: str) -> Tuple[float, str]:
     if not ans:
         return 0.0, q.get("feedback_incorrect", "No answer provided.")
-    correct = q["correct_value"]
-    if equals_loose(ans, correct):
+    if equals_loose(ans, q["correct_value"]):
         return float(q["max_marks"]), q.get("feedback_correct", "Correct.")
     for v in q.get("accepted_values", []):
         if equals_loose(ans, v):
@@ -68,7 +67,6 @@ def grade_differentiate(q: Dict[str, Any], ans: str) -> Tuple[float, str]:
         return 0.0, q.get("feedback_incorrect", "No answer provided.")
     max_m = float(q["max_marks"])
     if special == "partial_as_meridian":
-        model = q.get("model_answer", {})
         has_left = any(w in normalize_text(ans) for w in ["element", "pure"])
         has_right = any(w in normalize_text(ans) for w in ["compound", "ratio", "combined", "mixtures", "mixture"])
         if has_left and has_right:
@@ -79,34 +77,22 @@ def grade_differentiate(q: Dict[str, Any], ans: str) -> Tuple[float, str]:
     return max_m, q.get("feedback_correct", "Correct differentiation.")
 
 def grade_question(q: Dict[str, Any], ans: str) -> Tuple[float, str]:
-    qtype = q["type"]
-    if qtype == "mcq":
-        return grade_mcq(q, ans)
-    if qtype == "true_false":
-        return grade_true_false(q, ans)
-    if qtype == "fill":
-        return grade_fill(q, ans)
-    if qtype in ("short_direct", "symbol", "flowchart"):
-        return grade_short_direct(q, ans)
-    if qtype == "classify":
-        return grade_classify(q, ans)
-    if qtype == "short_def":
-        return grade_short_def(q, ans)
-    if qtype == "reason":
-        return grade_reason(q, ans)
-    if qtype == "differentiate":
-        return grade_differentiate(q, ans)
+    t = q["type"]
+    if t == "mcq": return grade_mcq(q, ans)
+    if t == "true_false": return grade_true_false(q, ans)
+    if t == "fill": return grade_fill(q, ans)
+    if t in ("short_direct", "symbol", "flowchart"): return grade_short_direct(q, ans)
+    if t == "classify": return grade_classify(q, ans)
+    if t == "short_def": return grade_short_def(q, ans)
+    if t == "reason": return grade_reason(q, ans)
+    if t == "differentiate": return grade_differentiate(q, ans)
     return 0.0, "Question type not handled."
 
 def compute_grade_from_percentage(p: float) -> str:
-    if p >= 90:
-        return "A"
-    if p >= 80:
-        return "B"
-    if p >= 70:
-        return "C"
-    if p >= 60:
-        return "D"
+    if p >= 90: return "A"
+    if p >= 80: return "B"
+    if p >= 70: return "C"
+    if p >= 60: return "D"
     return "E"
 
 def grade_script(answer_key: Dict[str, Any], script: StudentScript) -> Dict[str, Any]:
@@ -120,11 +106,9 @@ def grade_script(answer_key: Dict[str, Any], script: StudentScript) -> Dict[str,
     for qid, q in key_by_id.items():
         max_marks = float(q["max_marks"])
         max_total += max_marks
-
         ans_text = ans_map.get(qid, "").strip()
         marks, feedback = grade_question(q, ans_text)
         total_obtained += marks
-
         results.append({
             "question_id": qid,
             "question_text": q["text"],
@@ -137,7 +121,6 @@ def grade_script(answer_key: Dict[str, Any], script: StudentScript) -> Dict[str,
 
     percentage = (total_obtained / max_total * 100.0) if max_total > 0 else 0.0
     grade = compute_grade_from_percentage(percentage)
-
     return {
         "student_name": script.student_name,
         "roll_no": script.roll_no,
