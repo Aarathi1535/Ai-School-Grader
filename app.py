@@ -1,6 +1,7 @@
 import json
 from grader_core import load_answer_key, grade_script
-from student_answers_schema import StudentScript, StudentAnswer
+# app.py
+from .grader_core import load_answer_key, grade_script
 
 def build_student_script_from_ocr(ocr_json_path: str) -> StudentScript:
     # Here you call your existing Azure OCR + mapping logic and finally
@@ -38,3 +39,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
