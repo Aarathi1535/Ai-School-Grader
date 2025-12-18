@@ -131,19 +131,20 @@ STUDENT ANSWER BOOKLET OCR TEXT:
 
 # ---------- Lenient subjective grading ----------
 
+
 def grade_subjective(question: dict, student_answer: str) -> dict:
     """
-    Lenient grading for all non-MCQ questions, imitating the faculty:
-    - Full marks when main concept is correct (even if wording/casing differs).
+    Lenient grading for all non-MCQ questions, imitating a human teacher:
+    - Full marks whenever the main concept is correct (even if wording is different).
     - Partial marks only when an important point is missing or unclear.
-    - Zero marks only for mostly wrong / off-topic / blank answers.
+    - Zero marks only when the answer is mostly wrong / off-topic / blank.
     """
     system_prompt = """
 You are a middle school chemistry teacher grading written answers.
 
 You are given:
 - one question (with type and max_marks)
-- a marking scheme / model_answer (teacher's expected key points)
+- a marking scheme / model_answer (what the teacher expects)
 - one student's answer
 
 Your grading style must imitate a lenient human teacher, like in real school exams:
