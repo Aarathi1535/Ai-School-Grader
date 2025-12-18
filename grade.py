@@ -6,13 +6,46 @@ def norm(s: str) -> str:
     return " ".join((s or "").lower().strip().split())
 
 def eval_mcq(q: QuestionSpec, ans: str) -> Tuple[float, str]:
+    """
+    MCQ grading:
+    - If student writes option letter (a/b/c/d), map to options list.
+    - If student writes full option text, compare against correct_option_text.
+    - Case-insensitive, ignores extra spaces.
+    """
     if not ans:
         return 0.0, "No answer."
-    s = norm(ans)
-    correct = norm(q.correct_option_text or "")
-    if correct and (correct in s or s in correct):
+
+    s_raw = ans.strip()
+    s = norm(s_raw)
+    correct_text = norm(q.correct_option_text or "")
+
+    # 1) Try letter-only answer (a, b, c, d)
+    if len(s) == 1 and s in ("a", "b", "c", "d"):
+        idx = {"a": 0, "b": 1, "c": 2, "d": 3}[s]
+        opts = q.options or []
+        if 0 <= idx < len(opts):
+            chosen_text = norm(opts[idx])
+            if chosen_text == correct_text:
+                return q.max_marks, f"Correct option ({s_raw})."
+            return 0.0, f"Incorrect option ({s_raw}). Correct: {q.correct_option_text}."
+
+    # 2) Try answers like "A. Taken in", "a) Cohesion", etc.
+    if s and s[0] in ("a", "b", "c", "d") and (s[1:2] in (".", ")", "-")):
+        letter = s[0]
+        idx = {"a": 0, "b": 1, "c": 2, "d": 3}[letter]
+        opts = q.options or []
+        if 0 <= idx < len(opts):
+            chosen_text = norm(opts[idx])
+            if chosen_text == correct_text:
+                return q.max_marks, f"Correct option ({letter})."
+            # fall through to text comparison as backup
+
+    # 3) Full-text comparison (student wrote the option text)
+    if correct_text and (correct_text in s or s in correct_text):
         return q.max_marks, "Correct option chosen."
+
     return 0.0, f"Incorrect. Correct option: {q.correct_option_text}."
+
 
 def eval_true_false(q: QuestionSpec, ans: str) -> Tuple[float, str]:
     if not ans:
@@ -119,3 +152,4 @@ def grade_script(student_answers: Dict[str, str]) -> Dict[str, Any]:
         "percentage": percentage,
         "grade": grade_letter,
     }
+
