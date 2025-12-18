@@ -8,9 +8,6 @@ _client = Groq(api_key=GROQ_API_KEY)
 
 def llm_json(model: str, system_prompt: str, user_prompt: str,
              max_retries: int = 3) -> dict:
-    """
-    Generic helper: call Groq and get JSON with simple rate-limit backoff.
-    """
     for attempt in range(max_retries):
         try:
             resp = _client.chat.completions.create(
@@ -206,3 +203,4 @@ Student answer:
     out.setdefault("marks_awarded", 0.0)
     out.setdefault("feedback", "")
     return out
+
