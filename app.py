@@ -1,46 +1,62 @@
 # app.py
 import streamlit as st
 import json
+
 from ocr_azure import ocr_pdf_bytes
-from llm_groq import extract_marking_scheme, extract_student_answers
+from answer_key import ANSWER_KEY
 from grade import grade_script
 
-st.set_page_config(page_title="AI Answer Sheet Evaluator", layout="wide")
-st.title("AI Answer Sheet Evaluator (Azure OCR + Groq)")
+# You need to implement this for your answer sheet format:
+# from parser import parse_answers_from_text
 
-tab_exam, tab_grade = st.tabs(["1. Build Marking Scheme", "2. Grade Answer Sheet"])
+def parse_answers_from_text(ocr_text: str) -> dict:
+    """
+    TEMP: stub that you must implement to map OCR text
+    to {question_id: answer_text}, e.g.:
+      {"1.1": "They lack intermolecular spaces", ...}
+    For now, you can reuse whatever parsing logic you already built.
+    """
+    # TODO: replace with your real parser
+    return {}
 
-with tab_exam:
-    st.subheader("Upload Exam Question Paper (PDF)")
+
+st.set_page_config(page_title="AI School Grader", layout="wide")
+st.title("AI School Grader (Chemistry – Class 7)")
+
+st.write("Upload the **question paper** and a **student answer sheet** to evaluate.")
+
+col1, col2 = st.columns(2)
+with col1:
     qp_file = st.file_uploader("Question paper PDF", type=["pdf"], key="qp")
-    if st.button("Generate Marking Scheme") and qp_file:
-        exam_text = ocr_pdf_bytes(qp_file.read())
-        scheme = extract_marking_scheme(exam_text)
-        st.success("Marking scheme generated.")
+with col2:
+    ans_file = st.file_uploader("Answer sheet PDF", type=["pdf"], key="ans")
 
-        st.download_button(
-            "Download marking_scheme.json",
-            data=json.dumps(scheme, ensure_ascii=False, indent=2),
-            file_name="marking_scheme.json",
-            mime="application/json"
-        )
-        st.json(scheme)
+if st.button("Evaluate Answer Sheet"):
+    if not qp_file or not ans_file:
+        st.error("Please upload both the question paper and the answer sheet.")
+    else:
+        # 1. OCR question paper (optional – shown only for reference)
+        qp_text = ocr_pdf_bytes(qp_file.read())
 
-with tab_grade:
-    st.subheader("Grade a Student Answer Sheet")
-    scheme_file = st.file_uploader("Upload marking_scheme.json", type=["json"])
-    answer_pdf = st.file_uploader("Upload student's answer sheet (PDF)", type=["pdf"])
+        with st.expander("Question paper OCR (for reference)"):
+            st.text(qp_text)
 
-    if st.button("Evaluate Answer Sheet") and scheme_file and answer_pdf:
-        scheme = json.load(scheme_file)
-        ans_text = ocr_pdf_bytes(answer_pdf.read())
-        student_answers_obj = extract_student_answers(scheme, ans_text)
-        report = grade_script(scheme, student_answers_obj)
+        # 2. OCR answer sheet
+        ans_text = ocr_pdf_bytes(ans_file.read())
 
-        st.markdown(
-            f"**Student:** {report.get('student_name') or 'Unknown'} "
-            f"(Roll: {report.get('roll_no') or 'N/A'})"
-        )
+        with st.expander("Answer sheet OCR (raw)"):
+            st.text(ans_text)
+
+        # 3. Parse student's answers into {question_id: answer}
+        student_answers = parse_answers_from_text(ans_text)
+
+        with st.expander("Parsed answers by question ID"):
+            st.json(student_answers)
+
+        # 4. Grade using fixed answer_key + grade.py
+        report = grade_script(student_answers)
+
+        st.subheader("Overall Result")
         st.metric("Score", f"{report['total']} / {report['max_total']}")
         st.metric("Percentage", f"{report['percentage']:.1f}%")
         st.metric("Grade", report["grade"])
