@@ -4,41 +4,26 @@ from answer_key import ANSWER_KEY, QuestionSpec
 
 def norm(s: str) -> str:
     return " ".join((s or "").lower().strip().split())
-
 def eval_mcq(q: QuestionSpec, ans: str) -> Tuple[float, str]:
     """
-    MCQ grading based only on FULL option text.
-    - Student answer is treated as a free text phrase.
-    - It is matched against the list of options, and then against the correct_option_text.
-    - Option letters (a/b/c/d) are ignored.
+    MCQ grading using ONLY full option text.
+    - Do NOT try to read or use option numbers/letters.
+    - Student answer is just text; if it expresses the same option text,
+      give full marks.
     """
     if not ans:
         return 0.0, "No answer."
 
     s = norm(ans)
+    correct = norm(q.correct_option_text or "")
 
-    # 1) Try to match student's text to one of the official options
-    chosen_option_text = None
-    for opt in (q.options or []):
-        if not opt:
-            continue
-        opt_norm = norm(opt)
-        # containment both ways to allow minor OCR variation / extra words
-        if opt_norm and (opt_norm in s or s in opt_norm):
-            chosen_option_text = opt
-            break
-
-    # Fallback: if no option matched, still compare directly to correct text
-    if chosen_option_text is None:
-        chosen_option_text = ans
-
-    chosen_norm = norm(chosen_option_text)
-    correct_norm = norm(q.correct_option_text or "")
-
-    if correct_norm and (correct_norm in chosen_norm or chosen_norm in correct_norm):
+    # If student's text contains the correct option text, or vice versa, accept.
+    if correct and (correct in s or s in correct):
         return q.max_marks, "Correct option chosen."
 
+    # Optional: show what text was expected
     return 0.0, f"Incorrect. Correct option: {q.correct_option_text}."
+
 
 
 def eval_true_false(q: QuestionSpec, ans: str) -> Tuple[float, str]:
@@ -146,5 +131,6 @@ def grade_script(student_answers: Dict[str, str]) -> Dict[str, Any]:
         "percentage": percentage,
         "grade": grade_letter,
     }
+
 
 
