@@ -1,53 +1,40 @@
-# app.py
-import streamlit as st
 import json
-from ocr_azure import ocr_pdf_bytes
-from llm_groq import extract_marking_scheme, extract_student_answers
-from grade import grade_script
+from grader_core import load_answer_key, grade_script
+from student_answers_schema import StudentScript, StudentAnswer
 
-st.set_page_config(page_title="AI Answer Sheet Evaluator", layout="wide")
-st.title("AI Answer Sheet Evaluator (Azure OCR + Groq)")
+def build_student_script_from_ocr(ocr_json_path: str) -> StudentScript:
+    # Here you call your existing Azure OCR + mapping logic and finally
+    # create a StudentScript object. For demo, hard-code Roman’s few answers.
+    # [file:2]
 
-tab_exam, tab_grade = st.tabs(["1. Build Marking Scheme", "2. Grade Answer Sheet"])
+    answers = [
+        StudentAnswer(question_id="1.1", answer="They lack intermolecular spaces"),
+        StudentAnswer(question_id="1.2", answer="Higher to lower concentration"),
+        StudentAnswer(question_id="2.i.1", answer="True"),  # intentionally wrong
+        StudentAnswer(question_id="2.ii.1", answer="Physical"),
+        StudentAnswer(question_id="2.iii.1", answer="H"),
+        StudentAnswer(question_id="2.iv.1", answer="The process in which liquid state changes into gaseous state is called as Evaporation."),
+        StudentAnswer(question_id="2.v.1", answer="Elements"),
+        StudentAnswer(question_id="3.1.a", answer="Solids have more density. Liquid have less density compared to solids."),
+        StudentAnswer(question_id="3.1.b", answer="Elements- Pure substances consists of only one type of atoms. Compounds- Pure homogeneous substances which are made up of two or more elements in fixed ratio."),
+        StudentAnswer(question_id="3.2.a", answer="Air space that makes it light."),
+        StudentAnswer(question_id="4.1.a", answer="Sublimation")
+    ]
 
-with tab_exam:
-    st.subheader("Upload Exam Question Paper (PDF)")
-    qp_file = st.file_uploader("Question paper PDF", type=["pdf"], key="qp")
-    if st.button("Generate Marking Scheme") and qp_file:
-        exam_text = ocr_pdf_bytes(qp_file.read())
-        scheme = extract_marking_scheme(exam_text)
-        st.success("Marking scheme generated.")
+    script = StudentScript(
+        student_name="Roman Manuel",
+        roll_no="33",
+        meta={"exam_id": "chem-2025-term1"},
+        answers=answers
+    )
+    return script
 
-        st.download_button(
-            "Download marking_scheme.json",
-            data=json.dumps(scheme, ensure_ascii=False, indent=2),
-            file_name="marking_scheme.json",
-            mime="application/json"
-        )
-        st.json(scheme)
+def main():
+    answer_key = load_answer_key("answer_key.json")
+    script = build_student_script_from_ocr("roman_ocr.json")
+    report = grade_script(answer_key, script)
 
-with tab_grade:
-    st.subheader("Grade a Student Answer Sheet")
-    scheme_file = st.file_uploader("Upload marking_scheme.json", type=["json"])
-    answer_pdf = st.file_uploader("Upload student's answer sheet (PDF)", type=["pdf"])
+    print(json.dumps(report, indent=2, ensure_ascii=False))
 
-    if st.button("Evaluate Answer Sheet") and scheme_file and answer_pdf:
-        scheme = json.load(scheme_file)
-        ans_text = ocr_pdf_bytes(answer_pdf.read())
-        student_answers_obj = extract_student_answers(scheme, ans_text)
-        report = grade_script(scheme, student_answers_obj)
-
-        st.markdown(
-            f"**Student:** {report.get('student_name') or 'Unknown'} "
-            f"(Roll: {report.get('roll_no') or 'N/A'})"
-        )
-        st.metric("Score", f"{report['total']} / {report['max_total']}")
-        st.metric("Percentage", f"{report['percentage']:.1f}%")
-        st.metric("Grade", report["grade"])
-
-        st.subheader("Detailed Evaluation")
-        for q in report["questions"]:
-            with st.expander(f"Q {q['id']} – {q['score']}/{q['max_marks']}"):
-                st.write(f"**Question:** {q['text']}")
-                st.write(f"**Student Answer:** {q['student_answer']}")
-                st.write(f"**Feedback:** {q['feedback']}")
+if __name__ == "__main__":
+    main()
