@@ -12,22 +12,27 @@ client = ImageAnalysisClient(
 
 def ocr_pdf_bytes(pdf_bytes: bytes) -> str:
     """
-    Render PDF pages to images and run Azure OCR.
+    Render PDF pages to images via PyMuPDF and run Azure OCR.
+    Returns plain text (lines joined with newlines).
     """
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    lines = []
+    all_text = []
+
     for page in doc:
-        mat = fitz.Matrix(2, 2)
+        # 2x zoom is usually enough; tweak if needed.
+        zoom = 2.0
+        mat = fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=mat)
         img_bytes = pix.tobytes("jpeg")
 
         result = client.analyze(
             image_data=img_bytes,
-            visual_features=[VisualFeatures.READ],
+            visual_features=[VisualFeatures.READ]
         )
         if result.read:
             for block in result.read.blocks:
                 for line in block.lines:
-                    lines.append(line.text)
+                    all_text.append(line.text)
+
     doc.close()
-    return "\n".join(lines)
+    return "\n".join(all_text)
