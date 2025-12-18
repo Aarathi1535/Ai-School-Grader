@@ -1,136 +1,105 @@
 # grade.py
-from typing import Dict, Any, List, Tuple
-from answer_key import ANSWER_KEY, QuestionSpec
+from typing import Dict, Any, List
+from llm_groq import grade_subjective
 
 def norm(s: str) -> str:
     return " ".join((s or "").lower().strip().split())
-def eval_mcq(q: QuestionSpec, ans: str) -> Tuple[float, str]:
+
+def grade_one_question(q: Dict[str, Any], student_answer: str) -> Dict[str, Any]:
     """
-    MCQ grading using ONLY full option text.
-    - Do NOT try to read or use option numbers/letters.
-    - Student answer is just text; if it expresses the same option text,
-      give full marks.
+    - MCQ: strict text-based check on full correct option text; fallback to Groq if key missing.
+    - Non-MCQ: lenient Groq grading using model_answer and max_marks.
     """
-    if not ans:
-        return 0.0, "No answer."
+    q_type = q.get("type")
+    max_marks = float(q.get("max_marks", 0))
+    student_answer = student_answer or ""
+    s_norm = norm(student_answer)
 
-    s = norm(ans)
-    correct = norm(q.correct_option_text or "")
+    # MCQ grading (old logic)
+    if q_type == "mcq":
+        correct_text = norm(q.get("correct_option_text") or "")
 
-    # If student's text contains the correct option text, or vice versa, accept.
-    if correct and (correct in s or s in correct):
-        return q.max_marks, "Correct option chosen."
+        # If scheme lacks correct_text, fallback to Groq
+        if not correct_text:
+            graded = grade_subjective(q, student_answer)
+            marks = float(graded.get("marks_awarded", 0.0))
+            marks = max(0.0, min(marks, max_marks))
+            return {"score": marks, "feedback": graded.get("feedback", "")}
 
-    # Optional: show what text was expected
-    return 0.0, f"Incorrect. Correct option: {q.correct_option_text}."
+        # Student may write the whole option or a slightly longer/shorter phrase.
+        if correct_text and (correct_text in s_norm or s_norm in correct_text):
+            return {"score": max_marks, "feedback": "Correct option chosen."}
 
+        if student_answer:
+            return {
+                "score": 0.0,
+                "feedback": f"Incorrect. Correct option: {q.get('correct_option_text', '')}."
+            }
 
+        return {"score": 0.0, "feedback": "No answer."}
 
-def eval_true_false(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    if not ans:
-        return 0.0, "No answer."
-    s = norm(ans)
-    val = "true" if s.startswith("t") else "false"
-    if val == (q.correct_value or ""):
-        return q.max_marks, "Correct answer."
-    return 0.0, "Incorrect answer."
+    # Non-MCQ: lenient Groq grading
+    graded = grade_subjective(q, student_answer)
+    marks = float(graded.get("marks_awarded", 0.0))
+    if marks < 0:
+        marks = 0.0
+    if marks > max_marks:
+        marks = max_marks
 
-def eval_fill_or_direct(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    if not ans:
-        return 0.0, "No answer."
-    if norm(ans) == norm(q.correct_value or ""):
-        return q.max_marks, "Correct answer."
-    return 0.0, f"Incorrect. Correct answer: {q.correct_value}."
-
-def eval_symbol(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    return eval_fill_or_direct(q, ans)
-
-def eval_classify(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    if not ans:
-        return 0.0, "No answer."
-    if (q.correct_value or "") in norm(ans):
-        return q.max_marks, "Correct."
-    return 0.0, "Incorrect classification."
-
-def eval_short_def(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    if not ans:
-        return 0.0, "No answer."
-    return q.max_marks, "Marked correct (definition)."
-
-def eval_reason(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    if not ans:
-        return 0.0, "No answer."
-    return q.max_marks, "Marked correct (reason)."
-
-def eval_differentiate(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    s = norm(ans)
-    if not s:
-        return 0.0, "No answer."
-    if q.id == "3.1.b":
-        return 0.5, "Partially correct: element definition correct; compound description incomplete."
-    if q.id == "3.1.e":
-        return 0.5, "Incomplete answer for mixtures."
-    return q.max_marks, "Correct differentiation."
-
-def eval_flowchart(q: QuestionSpec, ans: str) -> Tuple[float, str]:
-    return eval_fill_or_direct(q, ans)
-
-def grade_one_question(q: QuestionSpec, student_answer: str) -> Dict[str, Any]:
-    t = q.q_type
-    ans = student_answer or ""
-    if t == "mcq":
-        score, fb = eval_mcq(q, ans)
-    elif t == "true_false":
-        score, fb = eval_true_false(q, ans)
-    elif t in ("fill", "short_direct"):
-        score, fb = eval_fill_or_direct(q, ans)
-    elif t == "symbol":
-        score, fb = eval_symbol(q, ans)
-    elif t == "classify":
-        score, fb = eval_classify(q, ans)
-    elif t == "short_def":
-        score, fb = eval_short_def(q, ans)
-    elif t == "reason":
-        score, fb = eval_reason(q, ans)
-    elif t == "differentiate":
-        score, fb = eval_differentiate(q, ans)
-    elif t == "flowchart":
-        score, fb = eval_flowchart(q, ans)
-    else:
-        score, fb = 0.0, "Not implemented."
     return {
-        "id": q.id,
-        "text": q.text,
-        "student_answer": ans,
-        "score": score,
-        "max_marks": q.max_marks,
-        "feedback": fb,
+        "score": marks,
+        "feedback": graded.get("feedback", ""),
     }
 
-def grade_script(student_answers: Dict[str, str]) -> Dict[str, Any]:
+def grade_script(scheme: Dict[str, Any],
+                 student_answers_obj: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    scheme: marking_scheme.json as dict
+    student_answers_obj: output from extract_student_answers()
+    """
+    ans_by_id = {
+        a["question_id"]: a["answer"]
+        for a in student_answers_obj.get("answers", [])
+    }
+
     results: List[Dict[str, Any]] = []
     total = 0.0
+
+    # Use real max_total from scheme; you had hard-coded 80 before.
     max_total = 0.0
-    for qid, q in ANSWER_KEY.items():
-        ans = student_answers.get(qid, "")
-        r = grade_one_question(q, ans)
-        results.append(r)
-        total += r["score"]
-        max_total += q.max_marks
+
+    for q in scheme.get("questions", []):
+        qid = q["id"]
+        ans = ans_by_id.get(qid, "")
+        graded = grade_one_question(q, ans)
+        max_marks = float(q.get("max_marks", 0))
+
+        results.append({
+            "id": qid,
+            "text": q["text"],
+            "student_answer": ans,
+            "score": graded["score"],
+            "max_marks": max_marks,
+            "feedback": graded["feedback"],
+        })
+
+        total += graded["score"]
+        max_total += max_marks
+
     percentage = (total / max_total) * 100 if max_total else 0.0
-    if percentage >= 90:
-        grade_letter = "A+"
-    elif percentage >= 80:
-        grade_letter = "A"
-    else:
-        grade_letter = "B"
+    grade_letter = (
+        "A+" if percentage >= 90 else
+        "A" if percentage >= 80 else
+        "B" if percentage >= 70 else
+        "C"
+    )
+
     return {
+        "student_name": student_answers_obj.get("student_name"),
+        "roll_no": student_answers_obj.get("roll_no"),
         "questions": results,
         "total": total,
         "max_total": max_total,
         "percentage": percentage,
         "grade": grade_letter,
     }
-
-
-
