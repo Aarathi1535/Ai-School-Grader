@@ -13,3 +13,5 @@ def equals_loose(a: str, b: str) -> bool:
 def contains_keywords(answer: str, keywords: list[str]) -> bool:
     ans_norm = normalize_text(answer)
     return all(k.lower() in ans_norm for k in keywords)
+
+
