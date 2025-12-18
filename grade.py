@@ -66,7 +66,6 @@ def eval_flowchart(q: QuestionSpec, ans: str) -> Tuple[float, str]:
 def grade_one_question(q: QuestionSpec, student_answer: str) -> Dict[str, Any]:
     t = q.q_type
     ans = student_answer or ""
-
     if t == "mcq":
         score, fb = eval_mcq(q, ans)
     elif t == "true_false":
@@ -87,7 +86,6 @@ def grade_one_question(q: QuestionSpec, student_answer: str) -> Dict[str, Any]:
         score, fb = eval_flowchart(q, ans)
     else:
         score, fb = 0.0, "Not implemented."
-
     return {
         "id": q.id,
         "text": q.text,
@@ -101,17 +99,19 @@ def grade_script(student_answers: Dict[str, str]) -> Dict[str, Any]:
     results: List[Dict[str, Any]] = []
     total = 0.0
     max_total = 0.0
-
     for qid, q in ANSWER_KEY.items():
         ans = student_answers.get(qid, "")
         r = grade_one_question(q, ans)
         results.append(r)
         total += r["score"]
         max_total += q.max_marks
-
     percentage = (total / max_total) * 100 if max_total else 0.0
-    grade_letter = "A+" if percentage >= 90 else "A" if percentage >= 80 else "B"
-
+    if percentage >= 90:
+        grade_letter = "A+"
+    elif percentage >= 80:
+        grade_letter = "A"
+    else:
+        grade_letter = "B"
     return {
         "questions": results,
         "total": total,
