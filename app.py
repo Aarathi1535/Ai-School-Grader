@@ -1,53 +1,31 @@
-# app.py
 import streamlit as st
+import json
 from ocr_azure import ocr_pdf_bytes
-from parser import parse_answers_from_text
+from llm_groq import extract_marking_scheme, extract_student_answers
 from grade import grade_script
 
 st.set_page_config(page_title="AI School Grader", layout="wide")
-st.title("AI School Grader – Chemistry (Class 7)")
+st.title("AI School Grader")
 
-st.write("Upload the **question paper PDF** and **student answer sheet PDF** to evaluate using the fixed answer key.")
-
-col1, col2 = st.columns(2)
-with col1:
-    qp_file = st.file_uploader("Question paper PDF", type=["pdf"], key="qp")
-with col2:
-    ans_file = st.file_uploader("Answer sheet PDF", type=["pdf"], key="ans")
+qp_file = st.file_uploader("Question paper PDF", type=["pdf"], key="qp")
+ans_file = st.file_uploader("Answer sheet PDF", type=["pdf"], key="ans")
 
 if st.button("Evaluate Answer Sheet"):
     if not qp_file or not ans_file:
         st.error("Please upload both PDFs.")
     else:
-        # 1. OCR question paper (reference only)
+        # 1. Build marking scheme from QP (OR load from cached JSON)
         qp_text = ocr_pdf_bytes(qp_file.read())
-        with st.expander("Question Paper OCR (reference)"):
-            st.text(qp_text)
+        scheme = extract_marking_scheme(qp_text)   # <- this defines `scheme`
 
-        # 2. OCR answer sheet
+        # 2. OCR answer sheet + extract answers
         ans_text = ocr_pdf_bytes(ans_file.read())
-        with st.expander("Answer Sheet OCR (raw)"):
-            st.text(ans_text)
+        student_answers_obj = extract_student_answers(scheme, ans_text)  # <- this defines `student_answers_obj`
 
-        # 3. Parse answers
-        student_answers = parse_answers_from_text(ans_text)
-        with st.expander("Parsed Answers by Question ID"):
-            st.json(student_answers)
-
-        # 4. Grade
-        # after you have scheme and student_answers_obj
+        # 3. Grade using scheme + extracted answers
         report = grade_script(scheme, student_answers_obj)
-
 
         st.subheader("Overall Result")
         st.metric("Score", f"{report['total']} / {report['max_total']}")
         st.metric("Percentage", f"{report['percentage']:.1f}%")
-        st.metric("Grade", report["grade"])
-
-        st.subheader("Detailed Evaluation")
-        for q in report["questions"]:
-            with st.expander(f"Q {q['id']} – {q['score']}/{q['max_marks']}"):
-                st.write(f"**Question:** {q['text']}")
-                st.write(f"**Student Answer:** {q['student_answer']}")
-                st.write(f"**Feedback:** {q['feedback']}")
-
+        st.metric("Grade", report['grade'])
