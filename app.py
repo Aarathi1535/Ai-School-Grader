@@ -1,29 +1,13 @@
 # app.py
 import streamlit as st
-import json
-
 from ocr_azure import ocr_pdf_bytes
-from answer_key import ANSWER_KEY
+from parser import parse_answers_from_text
 from grade import grade_script
 
-# You need to implement this for your answer sheet format:
-# from parser import parse_answers_from_text
-
-def parse_answers_from_text(ocr_text: str) -> dict:
-    """
-    TEMP: stub that you must implement to map OCR text
-    to {question_id: answer_text}, e.g.:
-      {"1.1": "They lack intermolecular spaces", ...}
-    For now, you can reuse whatever parsing logic you already built.
-    """
-    # TODO: replace with your real parser
-    return {}
-
-
 st.set_page_config(page_title="AI School Grader", layout="wide")
-st.title("AI School Grader (Chemistry – Class 7)")
+st.title("AI School Grader – Chemistry (Class 7)")
 
-st.write("Upload the **question paper** and a **student answer sheet** to evaluate.")
+st.write("Upload the **question paper** and **student answer sheet** to evaluate using the fixed answer key.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -33,27 +17,24 @@ with col2:
 
 if st.button("Evaluate Answer Sheet"):
     if not qp_file or not ans_file:
-        st.error("Please upload both the question paper and the answer sheet.")
+        st.error("Please upload both PDFs.")
     else:
-        # 1. OCR question paper (optional – shown only for reference)
+        # 1. OCR question paper (for reference only)
         qp_text = ocr_pdf_bytes(qp_file.read())
-
-        with st.expander("Question paper OCR (for reference)"):
+        with st.expander("Question Paper OCR (reference)"):
             st.text(qp_text)
 
         # 2. OCR answer sheet
         ans_text = ocr_pdf_bytes(ans_file.read())
-
-        with st.expander("Answer sheet OCR (raw)"):
+        with st.expander("Answer Sheet OCR (raw)"):
             st.text(ans_text)
 
-        # 3. Parse student's answers into {question_id: answer}
+        # 3. Parse answers -> {question_id: answer}
         student_answers = parse_answers_from_text(ans_text)
-
-        with st.expander("Parsed answers by question ID"):
+        with st.expander("Parsed Answers (by question ID)"):
             st.json(student_answers)
 
-        # 4. Grade using fixed answer_key + grade.py
+        # 4. Grade deterministically from answer_key
         report = grade_script(student_answers)
 
         st.subheader("Overall Result")
