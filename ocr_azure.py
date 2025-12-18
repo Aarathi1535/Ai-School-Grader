@@ -12,7 +12,7 @@ client = ImageAnalysisClient(
 
 def ocr_pdf_bytes(pdf_bytes: bytes) -> str:
     """
-    Render each PDF page as image, run Azure READ OCR, return plain text.
+    Render PDF pages to images and run Azure OCR.
     """
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     lines = []
