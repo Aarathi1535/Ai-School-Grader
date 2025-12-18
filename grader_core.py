@@ -9,17 +9,32 @@ def load_answer_key(path: str) -> Dict[str, Any]:
         data = json.load(f)
     key_by_id = {q["id"]: q for q in data["questions"]}
     return {"meta": data["meta"], "questions_by_id": key_by_id}
-
 def grade_mcq(q: Dict[str, Any], ans: str) -> Tuple[float, str]:
     if not ans:
         return 0.0, q.get("feedback_incorrect", "No answer provided.")
+
+    # Normalize
+    ans_norm = normalize_text(ans)
     options = q["options"]
     correct_idx = q["correct_option_index"]
     correct_text_norm = normalize_text(options[correct_idx])
-    ans_norm = normalize_text(ans)
+
+    # 1) Try strict text match
     if ans_norm == correct_text_norm:
         return float(q["max_marks"]), q.get("feedback_correct", "Correct.")
-    return 0.0, q.get("feedback_incorrect", "Incorrect.")
+
+    # 2) If student wrote only the key phrase, accept if it is contained
+    # e.g. "they lack interndecular spaces" vs "they lack intermolecular spaces"
+    if ans_norm in correct_text_norm or correct_text_norm in ans_norm:
+        return float(q["max_marks"]), q.get("feedback_correct", "Correct.")
+
+    # 3) Keyword match: require at least one key word from correct option
+    correct_words = [w for w in correct_text_norm.split() if len(w) > 3]
+    if all(w in ans_norm for w in correct_words[:2]):  # first two content words
+        return float(q["max_marks"]), q.get("feedback_correct", "Correct.")
+
+    return 0.0, q.get("feedback_incorrect", "Incorrect option.")
+
 
 def grade_true_false(q: Dict[str, Any], ans: str) -> Tuple[float, str]:
     correct = q["correct_value"]
