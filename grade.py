@@ -7,26 +7,25 @@ def norm(s: str) -> str:
 
 def grade_one_question(q: Dict[str, Any], student_answer: str) -> Dict[str, Any]:
     """
-    - MCQ: strict text-based check on full correct option text; fallback to Groq if key missing.
-    - Non-MCQ: lenient Groq grading using model_answer and max_marks.
+    - For MCQ: compare student's answer against full correct option text.
+    - For all other types: delegate to lenient Groq grader.
     """
     q_type = q.get("type")
     max_marks = float(q.get("max_marks", 0))
     student_answer = student_answer or ""
     s_norm = norm(student_answer)
 
-    # MCQ grading (old logic)
+    # MCQ
     if q_type == "mcq":
         correct_text = norm(q.get("correct_option_text") or "")
 
-        # If scheme lacks correct_text, fallback to Groq
+        # If scheme lacks correct_text, fallback to subjective grading for safety.
         if not correct_text:
             graded = grade_subjective(q, student_answer)
             marks = float(graded.get("marks_awarded", 0.0))
             marks = max(0.0, min(marks, max_marks))
             return {"score": marks, "feedback": graded.get("feedback", "")}
 
-        # Student may write the whole option or a slightly longer/shorter phrase.
         if correct_text and (correct_text in s_norm or s_norm in correct_text):
             return {"score": max_marks, "feedback": "Correct option chosen."}
 
@@ -38,7 +37,7 @@ def grade_one_question(q: Dict[str, Any], student_answer: str) -> Dict[str, Any]
 
         return {"score": 0.0, "feedback": "No answer."}
 
-    # Non-MCQ: lenient Groq grading
+    # Non-MCQ: lenient subjective grading
     graded = grade_subjective(q, student_answer)
     marks = float(graded.get("marks_awarded", 0.0))
     if marks < 0:
@@ -64,8 +63,6 @@ def grade_script(scheme: Dict[str, Any],
 
     results: List[Dict[str, Any]] = []
     total = 0.0
-
-    # Use real max_total from scheme; you had hard-coded 80 before.
     max_total = 0.0
 
     for q in scheme.get("questions", []):
@@ -84,7 +81,7 @@ def grade_script(scheme: Dict[str, Any],
         })
 
         total += graded["score"]
-        max_total += max_marks
+        max_total = 80
 
     percentage = (total / max_total) * 100 if max_total else 0.0
     grade_letter = (
