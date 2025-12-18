@@ -7,7 +7,7 @@ from grade import grade_script
 st.set_page_config(page_title="AI School Grader", layout="wide")
 st.title("AI School Grader – Chemistry (Class 7)")
 
-st.write("Upload the **question paper** and **student answer sheet** to evaluate using the fixed answer key.")
+st.write("Upload the **question paper PDF** and **student answer sheet PDF** to evaluate using the fixed answer key.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -19,7 +19,7 @@ if st.button("Evaluate Answer Sheet"):
     if not qp_file or not ans_file:
         st.error("Please upload both PDFs.")
     else:
-        # 1. OCR question paper (for reference only)
+        # 1. OCR question paper (just for reference)
         qp_text = ocr_pdf_bytes(qp_file.read())
         with st.expander("Question Paper OCR (reference)"):
             st.text(qp_text)
@@ -29,12 +29,12 @@ if st.button("Evaluate Answer Sheet"):
         with st.expander("Answer Sheet OCR (raw)"):
             st.text(ans_text)
 
-        # 3. Parse answers -> {question_id: answer}
+        # 3. Parse answers
         student_answers = parse_answers_from_text(ans_text)
-        with st.expander("Parsed Answers (by question ID)"):
+        with st.expander("Parsed Answers by Question ID"):
             st.json(student_answers)
 
-        # 4. Grade deterministically from answer_key
+        # 4. Grade deterministically
         report = grade_script(student_answers)
 
         st.subheader("Overall Result")
