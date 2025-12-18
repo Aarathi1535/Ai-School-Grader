@@ -5,16 +5,14 @@ import re
 def parse_answers_from_text(text: str) -> Dict[str, str]:
     answers: Dict[str, str] = {}
 
-    # Basic MCQ extraction from OCR lines "1. ...", "2. ..."
+    # MCQ lines like "1.7. They lack ..."
     mcq_map = {
         1: "1.1",  2: "1.2",  3: "1.3",  4: "1.4",  5: "1.5",
         6: "1.6",  7: "1.7",  8: "1.8",  9: "1.9",  10: "1.10",
         11: "1.11", 12: "1.12", 13: "1.13", 14: "1.14", 15: "1.15",
     }
-
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     mcq_pattern = re.compile(r"^(\d+)\s*[\.\)]\s*(.+)$")
-
     for line in lines:
         m = mcq_pattern.match(line)
         if not m:
@@ -25,7 +23,8 @@ def parse_answers_from_text(text: str) -> Dict[str, str]:
             ans_text = m.group(2)
             answers[qid] = ans_text
 
-    # Hard-coded for Roman’s sheet (from New-Doc-12-13-2025-13.30.pdf)
+    # Below are Roman's answers hard-coded (from New-Doc-12-13-2025-13.30.pdf)
+
     # Q2(i)
     answers["2(i).1"] = "True"
     answers["2(i).2"] = "False"
