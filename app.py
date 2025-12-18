@@ -19,7 +19,7 @@ if st.button("Evaluate Answer Sheet"):
     if not qp_file or not ans_file:
         st.error("Please upload both PDFs.")
     else:
-        # 1. OCR question paper (just for reference)
+        # 1. OCR question paper (reference only)
         qp_text = ocr_pdf_bytes(qp_file.read())
         with st.expander("Question Paper OCR (reference)"):
             st.text(qp_text)
@@ -34,7 +34,7 @@ if st.button("Evaluate Answer Sheet"):
         with st.expander("Parsed Answers by Question ID"):
             st.json(student_answers)
 
-        # 4. Grade deterministically
+        # 4. Grade
         report = grade_script(student_answers)
 
         st.subheader("Overall Result")
