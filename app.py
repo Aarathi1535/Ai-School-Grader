@@ -8,9 +8,82 @@ ANSWER_KEY = load_answer_key("answer_key.json")
 # --- 1. OCR stub (replace with your real Azure call) ---
 
 def azure_ocr_extract_text(pdf_bytes: bytes) -> str:
-    # TODO: call Azure Vision/Read and build a plain-text string
-    # For now, assume you already have this implemented elsewhere.
-    raise NotImplementedError("Wire this to your Azure OCR function.")
+    # TEMP: return hard-coded text like Roman's sheet so pipeline works
+    return """
+New Doc 12-13-2025 13.30 BALDWIN BOYS HIGH SCHOOL...
+1. A. They lack interndecular spaces
+2. A. Higher to lower concentration
+3. A. Taken in
+4. A. Cohesion
+5. A. Both bandc
+6. A. Physical chang
+7. A. liquids
+8. A. atoms
+9. A. Photosynthesis
+10. A. A fast change
+11-0 Mercury
+12.A. Grystalline shafo
+13.A. Argon Ozone
+14. A. Gunpowder
+15.A. compound
+PA True X
+2.A. False
+3. A. False
+4.A. Jrue X
+5.A. Jrue
+ii 1.n Physical
+2.A. Oxygen and Water
+3-A. 3
+4.A. Elements
+5. A. Electrolyis
+iii 1.A. H
+2. A Cl
+3.A. P
+4.A. Mg
+5. A. Fe
+iv 1.A The process in which liquid state changes into gascon state is called as Evaporation.
+2. A. The chemical reaction in which the heat is absorbed.
+3.A. No new substances are formed. It is usually reversible and some changes involve heating or et cooling.
+4.A. A Grouf of elements which has both properties of metalls,
+6.A. The substances which mir with other mixture completely is called Homogeneous mixture.
+1A Elements
+2.A. Compound
+3. A. Mixture
+4.A Compound
+5.1. Mixture
+6.A. Mixture Element
+8.A. Mixture
+9.A. Comfround
+10.1. Mixture
+Section-B Question 3.
+1. A. solids have Jonore more density Liquid have less density compared to slide
+2. A. Elements - Pure substances consils of only one type of atoms Compounds Pure homogeneous substances which are made wh of two or more compounds comp raha
+3. A. Day and Night - Periodic change Eruption of Volcano - Non - Periodic change
+4. A. Monoatomic - 1 Diatomic - 2
+5. A. Compounds - It is separated by hand.c Mixtures- 56 is separated by sparating fun
+Give Reasons
+1.A. Air shace that make it light.
+2.A. Because buring gives out the heat.
+3.A. They are closely packed together.
+4.A. Because of we burn the camelle we get the wars was... Carbon dioxide...
+5. A. Because it is missed with two or more elements elements or compound or two more compounds in any ratio
+Question 4
+1. a. Sublimation
+b. Scharting furn
+c. Filtration
+d. Evaporation
+e. Fillbration
+2. a. A- Residue B-Water
+6. It is a comfround
+c. Because sall and water form homogeneous mixhave which connot be scharated by this method
+d. H2O
+question-5
+1. A. 1- Mixture 2- Compounds 3- Heterogeneous 4- Non-Metalls 5. Mettaliods
+2. a- Heterogeneous mixture b. Triatomic c. separating Fund d. Hetting Freezing ze. slow change
+Question-6
+a. Solid Solid heterogenous b. Iron L. Both iron and sulphur are not attracted to the maquet
+2. a. Conical flask b. Funnel c. Separating fure d. watch-Glass e. Round bottomed flask glass! F. Test tube holder
+"""
 
 # --- 2. Map OCR text -> StudentScript for this exam ---
 
@@ -187,3 +260,4 @@ if uploaded_answer is not None and st.button("Grade Answer Sheet"):
     st.write(f"{report['total_score']} / {report['max_marks']}  ({report['percentage']:.1f}%)  Grade: {report['grade']}")
     st.subheader("Details")
     st.json(report)
+
